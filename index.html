@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Maré — painel de hidratação</title>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#08192B">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Maré">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --deep:#08192B;
+  --deep-2:#0C2136;
+  --ocean:#123A5E;
+  --ocean-2:#1B4B6E;
+  --tide:#2FA8A0;
+  --tide-light:#5FD0C4;
+  --foam:#EAF6F4;
+  --foam-dim:#B9CCD1;
+  --dawn:#E8B65A;
+  --coral:#E2725B;
+  --line:rgba(234,246,244,0.10);
+  --radius:14px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+html,body{height:100%;}
+
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  color:var(--foam);
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(47,168,160,0.18), transparent 55%),
+    radial-gradient(ellipse at 100% 0%, rgba(232,182,90,0.10), transparent 45%),
+    var(--deep);
+  min-height:100vh;
+  position:relative;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  overscroll-behavior-y:contain;
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 64px),
+    repeating-linear-gradient(90deg, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 64px);
+  opacity:0.5;
+  pointer-events:none;
+  z-index:0;
+}
+
+#app{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:22px 18px 90px;}
+
+/* ---------- Header ---------- */
+.topbar{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:26px;
+  flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:10px;}
+.brand-mark{
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;
+  font-size:24px;
+  letter-spacing:0.01em;
+  color:var(--foam);
+}
+.brand-mark span{color:var(--tide-light);}
+.brand-tag{font-size:12px;color:var(--foam-dim);letter-spacing:0.02em;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.icon-btn{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--foam-dim);
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  padding:8px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease;
+  display:flex;align-items:center;gap:6px;
+  min-height:36px;
+}
+.icon-btn:hover{border-color:var(--tide);color:var(--foam);}
+.icon-btn:focus-visible{outline:2px solid var(--tide-light);outline-offset:2px;}
+.icon-btn.active-indicator{border-color:var(--tide);color:var(--tide-light);}
+
+/* ---------- Eyebrow / section labels ---------- */
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px;
+  color:var(--tide-light);
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+}
+.eyebrow::before{content:'';width:14px;height:1px;background:var(--tide);display:inline-block;}
+
+h2.section-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:21px;
+  font-weight:600;
+  margin:0 0 18px;
+  color:var(--foam);
+}
+
+section{margin-bottom:48px;}
+
+/* ---------- Hero / Gauge layout ---------- */
+.hero{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  gap:32px;
+  align-items:center;
+  background:linear-gradient(180deg, var(--ocean) 0%, var(--deep-2) 100%);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:24px;
+}
+@media(max-width:640px){
+  .hero{grid-template-columns:1fr;justify-items:center;text-align:center;}
+}
+
+.tank-wrap{position:relative;width:140px;height:200px;}
+.tank-frame{
+  position:absolute;inset:0;
+  border:2px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+  background:rgba(255,255,255,0.02);
+}
+.tank-ticks{position:absolute;inset:0;z-index:3;pointer-events:none;}
+.tank-tick{
+  position:absolute;right:6px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:8.5px;color:var(--foam-dim);
+  opacity:0.65;transform:translateY(-50%);
+}
+.tank-tick::before{
+  content:'';position:absolute;right:100%;top:50%;
+  width:8px;height:1px;background:var(--foam-dim);
+  opacity:0.5;margin-right:4px;
+}
+.tank-fill{
+  position:absolute;bottom:0;left:0;right:0;height:0%;
+  background:linear-gradient(180deg, var(--tide-light), var(--tide) 70%, #1E7C76);
+  transition:height 0.7s cubic-bezier(.4,0,.2,1);
+  z-index:1;
+}
+.tank-wave{position:absolute;left:-25%;width:150%;height:16px;top:-8px;}
+.tank-wave svg{width:200%;height:100%;display:block;animation:waveMove 5.5s linear infinite;}
+.tank-wave.wave2 svg{animation-duration:8s;opacity:0.5;animation-direction:reverse;}
+@keyframes waveMove{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes pulseTank{0%,100%{filter:brightness(1);}50%{filter:brightness(1.35);}}
+.tank-frame.reminding{animation:pulseTank 1s ease-in-out 3;}
+@media (prefers-reduced-motion: reduce){
+  .tank-wave svg{animation:none;}
+  .tank-fill{transition:none;}
+  .tank-frame.reminding{animation:none;}
+}
+.tank-pct{
+  position:absolute;top:8px;left:0;right:0;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--foam-dim);z-index:2;
+}
+
+.hero-info .big-number{
+  font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;line-height:1;margin-bottom:4px;
+}
+.hero-info .big-number small{font-size:17px;font-weight:500;color:var(--foam-dim);}
+.hero-info .goal-line{font-size:13px;color:var(--foam-dim);margin-bottom:18px;}
+.hero-info .goal-line strong{color:var(--tide-light);font-weight:600;}
+
+.quick-add{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px;}
+.qa-btn{
+  font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--deep);
+  background:var(--foam);border:none;padding:11px 16px;border-radius:10px;cursor:pointer;
+  display:flex;align-items:center;gap:7px;transition:transform .12s ease, background .15s ease;
+  min-height:40px;
+}
+.qa-btn:hover{background:var(--tide-light);transform:translateY(-1px);}
+.qa-btn:active{transform:translateY(0);}
+.qa-btn:focus-visible{outline:2px solid var(--dawn);outline-offset:2px;}
+.qa-btn.custom{background:transparent;border:1px solid var(--line);color:var(--foam);}
+.qa-btn.custom:hover{border-color:var(--dawn);background:transparent;color:var(--dawn);}
+
+.hero-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+.link-btn{
+  background:none;border:none;color:var(--foam-dim);font-family:'Inter',sans-serif;
+  font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 0;
+}
+.link-btn:hover{color:var(--coral);}
+
+.week-strip{display:flex;gap:8px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);}
+.week-day{flex:1;text-align:center;}
+.week-bar-track{
+  height:60px;width:100%;background:rgba(255,255,255,0.04);border-radius:6px;
+  display:flex;align-items:flex-end;overflow:hidden;margin-bottom:6px;
+}
+.week-bar{width:100%;background:linear-gradient(180deg, var(--tide-light), var(--tide));border-radius:6px 6px 0 0;transition:height .5s ease;}
+.week-bar.met{background:linear-gradient(180deg, var(--dawn), #C99640);}
+.week-label{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:var(--foam-dim);text-transform:capitalize;}
+
+/* ---------- BMI ---------- */
+.bmi-card{
+  background:var(--ocean);border:1px solid var(--line);border-radius:20px;padding:26px;
+  display:grid;grid-template-columns:1fr 1.4fr;gap:28px;
+}
+@media(max-width:640px){.bmi-card{grid-template-columns:1fr;}}
+.bmi-value{font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:700;line-height:1;}
+.bmi-class{
+  display:inline-block;margin-top:10px;padding:5px 12px;border-radius:20px;
+  font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif;color:#08192B;
+}
+.bmi-note{font-size:12.5px;color:var(--foam-dim);margin-top:16px;line-height:1.5;}
+.bmi-scale{position:relative;padding-top:8px;}
+.bmi-scale-track{
+  height:10px;border-radius:6px;
+  background:linear-gradient(90deg, #4E8FD1 0 16%, #2FA87E 16% 45%, var(--dawn) 45% 65%, var(--coral) 65% 100%);
+  position:relative;
+}
+.bmi-scale-marker{position:absolute;top:-6px;width:2px;height:22px;background:var(--foam);transition:left .5s ease;}
+.bmi-scale-marker::after{
+  content:attr(data-val);position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--foam);white-space:nowrap;
+}
+.bmi-scale-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--foam-dim);}
+
+/* ---------- Reminders panel ---------- */
+.reminder-card{
+  background:var(--ocean);border:1px solid var(--line);border-radius:20px;padding:26px;
+}
+.reminder-row{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;
+}
+.reminder-row:last-child{border-bottom:none;padding-bottom:0;}
+.reminder-row:first-child{padding-top:0;}
+.reminder-label{font-size:14px;font-weight:500;}
+.reminder-sub{font-size:12px;color:var(--foam-dim);margin-top:3px;}
+
+.switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch-track{
+  position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.12);
+  border-radius:26px;transition:.2s;
+}
+.switch-track::before{
+  content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;
+  background:var(--foam);border-radius:50%;transition:.2s;
+}
+.switch input:checked + .switch-track{background:var(--tide);}
+.switch input:checked + .switch-track::before{transform:translateX(20px);background:var(--deep);}
+.switch input:focus-visible + .switch-track{outline:2px solid var(--dawn);outline-offset:2px;}
+
+select.reminder-select, input.reminder-time{
+  background:rgba(255,255,255,0.05);border:1px solid var(--line);color:var(--foam);
+  font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;border-radius:8px;
+}
+.reminder-time-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.status-pill{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;border-radius:20px;
+  border:1px solid var(--line);color:var(--foam-dim);
+}
+.status-pill.ok{color:var(--tide-light);border-color:var(--tide);}
+.status-pill.warn{color:var(--dawn);border-color:var(--dawn);}
+.reminder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.btn-secondary{
+  background:transparent;border:1px solid var(--line);color:var(--foam);
+  font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;padding:9px 14px;
+  border-radius:9px;cursor:pointer;transition:border-color .15s ease;min-height:38px;
+}
+.btn-secondary:hover{border-color:var(--tide-light);}
+.btn-secondary:focus-visible{outline:2px solid var(--tide-light);outline-offset:2px;}
+
+/* ---------- Weekly weight ---------- */
+.weight-card{background:var(--ocean);border:1px solid var(--line);border-radius:20px;padding:26px;}
+.weight-input-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.weight-field-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.weight-field-inline input[type="number"]{
+  background:rgba(255,255,255,0.05);border:1px solid var(--line);color:var(--foam);
+  font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;padding:9px 12px;
+  border-radius:9px;width:100px;
+}
+.weight-field-inline input[type="number"]:focus-visible{outline:2px solid var(--tide-light);border-color:var(--tide-light);}
+.weight-save-btn{
+  background:var(--dawn);color:var(--deep);border:none;font-family:'Inter',sans-serif;
+  font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer;min-height:40px;
+}
+.weight-save-btn:hover{filter:brightness(1.08);}
+.weight-save-btn:focus-visible{outline:2px solid var(--tide-light);outline-offset:2px;}
+.weight-badge{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;width:100%;
+}
+.weight-badge-value{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--tide-light);}
+.weight-badge-sub{font-size:12px;color:var(--foam-dim);}
+.weight-edit-link{
+  margin-left:auto;background:none;border:none;color:var(--foam-dim);font-family:'Inter',sans-serif;
+  font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+}
+.weight-edit-link:hover{color:var(--dawn);}
+.weight-chart-wrap{margin-bottom:14px;}
+.weight-empty{
+  font-size:12.5px;color:var(--foam-dim);text-align:center;padding:32px 10px;
+  border:1px dashed var(--line);border-radius:12px;
+}
+.weight-stats{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--foam-dim);margin-bottom:14px;}
+.weight-stats strong{color:var(--foam);font-family:'IBM Plex Mono',monospace;}
+.weight-note{font-size:11.5px;color:var(--foam-dim);line-height:1.5;}
+
+/* ---------- Benefits grid ---------- */
+.benefits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px;}
+.benefit-card{background:var(--ocean);border:1px solid var(--line);border-radius:14px;padding:17px;}
+.benefit-icon{font-size:21px;margin-bottom:9px;display:block;}
+.benefit-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;margin-bottom:6px;}
+.benefit-text{font-size:12.5px;color:var(--foam-dim);line-height:1.5;}
+
+/* ---------- Timeline tips ---------- */
+.timeline{border-left:1px solid var(--line);margin-left:6px;}
+.tl-item{position:relative;padding:2px 0 22px 26px;}
+.tl-item::before{
+  content:'';position:absolute;left:-5px;top:4px;width:9px;height:9px;border-radius:50%;
+  background:var(--tide-light);box-shadow:0 0 0 4px rgba(47,168,160,0.15);
+}
+.tl-time{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tide-light);margin-bottom:3px;}
+.tl-text{font-size:13.5px;color:var(--foam);line-height:1.5;}
+.tl-text strong{color:var(--dawn);}
+
+footer{text-align:center;font-size:11.5px;color:var(--foam-dim);padding-top:22px;border-top:1px solid var(--line);}
+
+/* ---------- Onboarding modal ---------- */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(4,12,20,0.72);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;z-index:10;padding:20px;
+}
+.modal{
+  background:var(--ocean);border:1px solid var(--line);border-radius:20px;max-width:440px;width:100%;
+  padding:28px;max-height:88vh;overflow-y:auto;
+}
+.modal h3{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 6px;}
+.modal p.sub{font-size:13px;color:var(--foam-dim);margin:0 0 22px;}
+.field{margin-bottom:15px;}
+.field label{display:block;font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:var(--foam-dim);margin-bottom:6px;letter-spacing:0.03em;}
+.field input, .field select{
+  width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--line);color:var(--foam);
+  font-family:'Inter',sans-serif;font-size:14px;padding:10px 12px;border-radius:9px;
+}
+.field input:focus, .field select:focus-visible{outline:2px solid var(--tide-light);outline-offset:1px;border-color:var(--tide-light);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.pill-group{display:flex;gap:8px;flex-wrap:wrap;}
+.pill{
+  flex:1;min-width:88px;text-align:center;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);font-size:12.5px;cursor:pointer;color:var(--foam-dim);transition:all .12s ease;
+}
+.pill.active{background:var(--tide);color:var(--deep);border-color:var(--tide);font-weight:600;}
+.pill:focus-visible{outline:2px solid var(--dawn);outline-offset:2px;}
+.submit-btn{
+  width:100%;background:var(--dawn);color:var(--deep);border:none;font-family:'Space Grotesk',sans-serif;
+  font-weight:700;font-size:15px;padding:13px;border-radius:10px;cursor:pointer;margin-top:6px;
+  transition:filter .15s ease;min-height:46px;
+}
+.submit-btn:hover{filter:brightness(1.08);}
+.error-msg{color:var(--coral);font-size:12px;margin-top:-8px;margin-bottom:14px;display:none;}
+.hidden{display:none !important;}
+.loading-note{text-align:center;color:var(--foam-dim);font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:60px 0;}
+
+/* ---------- Install banner ---------- */
+.install-banner{
+  position:fixed;left:16px;right:16px;bottom:16px;z-index:9;
+  background:var(--dawn);color:var(--deep);border-radius:14px;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  max-width:520px;margin:0 auto;
+}
+.install-banner p{margin:0;font-size:13px;font-weight:600;}
+.install-banner button{
+  background:var(--deep);color:var(--foam);border:none;padding:9px 14px;border-radius:8px;
+  font-weight:700;font-size:12.5px;cursor:pointer;
+}
+.install-banner .close-x{background:transparent;color:var(--deep);font-size:16px;padding:4px 6px;}
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-140%);
+  background:var(--tide);color:var(--deep);padding:12px 18px;border-radius:10px;
+  font-size:13px;font-weight:600;z-index:20;transition:transform .35s ease;
+  box-shadow:0 8px 20px rgba(0,0,0,0.3);max-width:90%;text-align:center;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+::selection{background:var(--tide);color:var(--deep);}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">Mar<span>é</span></div>
+      <div class="brand-tag">painel de hidratação</div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-readout" id="dateReadout" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--foam-dim);"></div>
+      <button class="icon-btn hidden" id="editProfileBtn">perfil</button>
+    </div>
+  </div>
+
+  <div id="loadingState" class="loading-note">carregando maré…</div>
+
+  <div id="mainContent" class="hidden">
+
+    <section class="hero-section">
+      <div class="eyebrow">agora</div>
+      <div class="hero">
+        <div class="tank-wrap">
+          <div class="tank-pct" id="tankPct">0%</div>
+          <div class="tank-frame" id="tankFrame">
+            <div class="tank-fill" id="tankFill">
+              <div class="tank-wave wave1">
+                <svg viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0 20 Q 37.5 0 75 20 T 150 20 T 225 20 T 300 20 T 375 20 T 450 20 T 525 20 T 600 20 V40 H0 Z" fill="rgba(255,255,255,0.35)"/></svg>
+              </div>
+              <div class="tank-wave wave2">
+                <svg viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0 20 Q 37.5 5 75 20 T 150 20 T 225 20 T 300 20 T 375 20 T 450 20 T 525 20 T 600 20 V40 H0 Z" fill="rgba(255,255,255,0.5)"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="tank-ticks" id="tankTicks"></div>
+        </div>
+
+        <div class="hero-info">
+          <div class="big-number"><span id="mlConsumed">0</span><small> ml</small></div>
+          <div class="goal-line">meta de hoje: <strong id="mlGoal">0 ml</strong> · faltam <span id="mlRemaining">0 ml</span></div>
+          <div class="quick-add">
+            <button class="qa-btn" data-ml="200">💧 copo · 200 ml</button>
+            <button class="qa-btn" data-ml="330">🥤 copo grande · 330 ml</button>
+            <button class="qa-btn" data-ml="500">🍶 garrafa · 500 ml</button>
+            <button class="qa-btn custom" id="customAddBtn">+ outra quantidade</button>
+          </div>
+          <div class="hero-actions">
+            <button class="link-btn" id="undoBtn">desfazer último registro</button>
+            <button class="link-btn" id="resetDayBtn">zerar dia</button>
+          </div>
+        </div>
+
+        <div class="week-strip" id="weekStrip" style="grid-column:1 / -1;"></div>
+      </div>
+    </section>
+
+    <section id="reminderSection">
+      <div class="eyebrow">lembretes</div>
+      <h2 class="section-title">Avisos sonoros para beber água</h2>
+      <div class="reminder-card">
+
+        <div class="reminder-row">
+          <div>
+            <div class="reminder-label">Lembretes ativos</div>
+            <div class="reminder-sub" id="reminderSubStatus">desligado</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="reminderToggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+
+        <div class="reminder-row">
+          <div>
+            <div class="reminder-label">Intervalo entre lembretes</div>
+            <div class="reminder-sub">com que frequência o Maré avisa</div>
+          </div>
+          <select class="reminder-select" id="intervalSelect">
+            <option value="30">30 min</option>
+            <option value="60" selected>1 h</option>
+            <option value="90">1h30</option>
+            <option value="120">2 h</option>
+            <option value="180">3 h</option>
+          </select>
+        </div>
+
+        <div class="reminder-row">
+          <div>
+            <div class="reminder-label">Não perturbe</div>
+            <div class="reminder-sub">pausa os lembretes nesse período</div>
+          </div>
+          <div class="reminder-time-group">
+            <input type="time" class="reminder-time" id="quietStart" value="22:00">
+            <span style="color:var(--foam-dim);font-size:12px;">até</span>
+            <input type="time" class="reminder-time" id="quietEnd" value="07:00">
+          </div>
+        </div>
+
+        <div class="reminder-row" style="border-bottom:none;padding-bottom:2px;">
+          <div class="reminder-actions">
+            <button class="btn-secondary" id="testSoundBtn">🔊 testar som</button>
+            <button class="btn-secondary" id="notifPermBtn">ativar notificações</button>
+          </div>
+          <span class="status-pill" id="notifStatusPill">notificações: verificando…</span>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="bmiSection">
+      <div class="eyebrow">seu corpo</div>
+      <h2 class="section-title">Índice de Massa Corporal</h2>
+      <div class="bmi-card">
+        <div>
+          <div class="bmi-value" id="bmiValue">–</div>
+          <div class="bmi-class" id="bmiClass">–</div>
+          <div class="bmi-note">O IMC é um indicador populacional simples (peso ÷ altura²) e não diferencia massa muscular de gordura, nem considera idade, sexo ou composição corporal. Use-o como referência geral — para uma avaliação real, converse com um profissional de saúde.</div>
+        </div>
+        <div>
+          <div class="bmi-scale">
+            <div class="bmi-scale-track">
+              <div class="bmi-scale-marker" id="bmiMarker" data-val="" style="left:0%"></div>
+            </div>
+            <div class="bmi-scale-labels">
+              <span>16</span><span>18.5</span><span>25</span><span>30</span><span>35</span><span>40+</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="weightSection">
+      <div class="eyebrow">evolução</div>
+      <h2 class="section-title">Peso semanal</h2>
+      <div class="weight-card">
+        <div class="weight-input-row" id="weightInputRow"></div>
+        <div class="weight-chart-wrap" id="weightChartWrap"></div>
+        <div class="weight-stats" id="weightStats"></div>
+        <div class="weight-note">Um registro por semana é suficiente para acompanhar a tendência sem virar obsessão com a balança. A semana começa na segunda-feira; registrar de novo antes disso apenas atualiza o valor da semana atual.</div>
+      </div>
+    </section>
+
+    <section id="benefitsSection">
+      <div class="eyebrow">por que isso importa</div>
+      <h2 class="section-title">Benefícios de se manter bem hidratado</h2>
+      <div class="benefits-grid">
+        <div class="benefit-card"><span class="benefit-icon">⚡</span><div class="benefit-title">Energia e disposição</div><div class="benefit-text">A desidratação leve já é suficiente para gerar sensação de cansaço e queda de rendimento nas atividades do dia.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🧠</span><div class="benefit-title">Foco e memória</div><div class="benefit-text">O cérebro é sensível à perda de água — manter-se hidratado ajuda a preservar concentração e clareza mental.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🩸</span><div class="benefit-title">Circulação</div><div class="benefit-text">A água é o principal componente do sangue, facilitando o transporte de oxigênio e nutrientes pelo corpo.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🌡️</span><div class="benefit-title">Temperatura corporal</div><div class="benefit-text">A transpiração depende de água disponível para regular o calor do corpo, especialmente em dias quentes ou exercício.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🫘</span><div class="benefit-title">Função renal</div><div class="benefit-text">Os rins precisam de água suficiente para filtrar toxinas do sangue e formar a urina de forma eficiente.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">✨</span><div class="benefit-title">Pele</div><div class="benefit-text">Hidratação adequada contribui para a elasticidade e aparência saudável da pele ao longo do tempo.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🍽️</span><div class="benefit-title">Digestão</div><div class="benefit-text">A água auxilia na quebra dos alimentos e ajuda a prevenir desconfortos como prisão de ventre.</div></div>
+        <div class="benefit-card"><span class="benefit-icon">🏃</span><div class="benefit-title">Desempenho físico</div><div class="benefit-text">Mesmo perdas pequenas de fluido corporal podem reduzir força, resistência e coordenação durante exercícios.</div></div>
+      </div>
+    </section>
+
+    <section id="tipsSection">
+      <div class="eyebrow">ao longo do dia</div>
+      <h2 class="section-title">Quando lembrar de beber água</h2>
+      <div class="timeline">
+        <div class="tl-item"><div class="tl-time">07:00</div><div class="tl-text"><strong>Ao acordar</strong> — um copo de água ajuda a repor o que foi perdido durante o sono.</div></div>
+        <div class="tl-item"><div class="tl-time">10:00</div><div class="tl-text">Meio da manhã — bom momento para uma pausa curta e um copo de água entre tarefas.</div></div>
+        <div class="tl-item"><div class="tl-time">12:00</div><div class="tl-text"><strong>Antes das refeições</strong> — beber água cerca de 30 minutos antes ajuda na digestão.</div></div>
+        <div class="tl-item"><div class="tl-time">15:30</div><div class="tl-text">Meio da tarde — quando o cansaço costuma bater, muitas vezes é sede disfarçada.</div></div>
+        <div class="tl-item"><div class="tl-time">18:00</div><div class="tl-text"><strong>Antes e depois de exercícios</strong> — repor os líquidos perdidos no suor é essencial.</div></div>
+        <div class="tl-item"><div class="tl-time">21:00</div><div class="tl-text">Início da noite — mantenha o ritmo, mas prefira reduzir perto da hora de dormir.</div></div>
+      </div>
+    </section>
+
+    <footer>Maré calcula estimativas com base em fórmulas gerais de referência. Não substitui orientação médica ou nutricional profissional. Seus dados ficam salvos apenas neste aparelho.</footer>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="install-banner hidden" id="installBanner">
+  <p>Instalar o Maré na tela inicial?</p>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button id="installBtn">Instalar</button>
+    <button class="close-x" id="installClose">✕</button>
+  </div>
+</div>
+
+<!-- Onboarding / edit profile modal -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Bem-vindo(a) à Maré</h3>
+    <p class="sub">Responda algumas informações rápidas para calcularmos sua meta diária de água e seu IMC.</p>
+
+    <div class="field">
+      <label for="fName">Como podemos te chamar?</label>
+      <input type="text" id="fName" placeholder="Seu nome" maxlength="30">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="fWeight">Peso (kg)</label>
+        <input type="number" id="fWeight" placeholder="70" min="20" max="300" step="0.1" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label for="fHeight">Altura (cm)</label>
+        <input type="number" id="fHeight" placeholder="170" min="90" max="250" step="0.1" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="fAge">Idade</label>
+        <input type="number" id="fAge" placeholder="30" min="5" max="120" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>Sexo biológico</label>
+        <div class="pill-group" id="sexPills">
+          <div class="pill" data-val="F">Feminino</div>
+          <div class="pill" data-val="M">Masculino</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Nível de atividade física</label>
+      <div class="pill-group" id="activityPills">
+        <div class="pill" data-val="sedentario">Sedentário</div>
+        <div class="pill" data-val="moderado">Moderado</div>
+        <div class="pill" data-val="intenso">Intenso</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Clima onde você está</label>
+      <div class="pill-group" id="climatePills">
+        <div class="pill" data-val="ameno">Ameno / frio</div>
+        <div class="pill" data-val="normal">Normal</div>
+        <div class="pill" data-val="quente">Quente / úmido</div>
+      </div>
+    </div>
+
+    <div class="error-msg" id="formError">Preencha todos os campos com valores válidos.</div>
+
+    <button class="submit-btn" id="submitProfileBtn">Calcular minha meta</button>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const $ = (id) => document.getElementById(id);
+  const todayKey = () => {
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  };
+  const dateKeyFor = (offsetDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() - offsetDays);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  };
+
+  let profile = null;
+  let todayLog = { totalMl: 0, entries: [] };
+  let editingSex = null, editingActivity = null, editingClimate = null;
+  let reminderTimer = null;
+  let goalCelebratedToday = false;
+
+  const defaultReminderSettings = { enabled:false, intervalMin:60, quietStart:'22:00', quietEnd:'07:00' };
+  let reminderSettings = { ...defaultReminderSettings };
+
+  // ---------- Storage helpers (localStorage — data stays on this device) ----------
+  function loadProfile(){
+    try{ const v = localStorage.getItem('mare_profile'); return v ? JSON.parse(v) : null; }
+    catch(e){ return null; }
+  }
+  function saveProfile(p){
+    try{ localStorage.setItem('mare_profile', JSON.stringify(p)); }catch(e){ console.error(e); }
+  }
+  function loadLog(dateStr){
+    try{ const v = localStorage.getItem('mare_log_'+dateStr); return v ? JSON.parse(v) : { totalMl:0, entries:[] }; }
+    catch(e){ return { totalMl:0, entries:[] }; }
+  }
+  function saveLog(dateStr, log){
+    try{ localStorage.setItem('mare_log_'+dateStr, JSON.stringify(log)); }catch(e){ console.error(e); }
+  }
+  function loadReminderSettings(){
+    try{ const v = localStorage.getItem('mare_reminders'); return v ? {...defaultReminderSettings, ...JSON.parse(v)} : {...defaultReminderSettings}; }
+    catch(e){ return {...defaultReminderSettings}; }
+  }
+  function saveReminderSettings(s){
+    try{ localStorage.setItem('mare_reminders', JSON.stringify(s)); }catch(e){ console.error(e); }
+  }
+  function loadWeightLog(){
+    try{ const v = localStorage.getItem('mare_weight_log'); return v ? JSON.parse(v) : []; }
+    catch(e){ return []; }
+  }
+  function saveWeightLog(arr){
+    try{ localStorage.setItem('mare_weight_log', JSON.stringify(arr)); }catch(e){ console.error(e); }
+  }
+
+  // ---------- Calculations ----------
+  function calcGoalMl(p){
+    let ml = p.weight * 35;
+    if(p.activity === 'moderado') ml += 300;
+    if(p.activity === 'intenso') ml += 500;
+    if(p.climate === 'quente') ml += 500;
+    if(p.climate === 'ameno') ml -= 150;
+    return Math.round(ml / 50) * 50;
+  }
+  function calcBMI(p){ const hM = p.height/100; return p.weight/(hM*hM); }
+  // Monday-based week start, used as the unique key for "one entry per week"
+  function getWeekStartKey(date){
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    const day = d.getDay(); // 0=Sun..6=Sat
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function classifyBMI(bmi){
+    if(bmi < 18.5) return {label:'Abaixo do peso', color:'#4E8FD1'};
+    if(bmi < 25) return {label:'Peso normal', color:'#2FA87E'};
+    if(bmi < 30) return {label:'Sobrepeso', color:'#E8B65A'};
+    if(bmi < 35) return {label:'Obesidade grau I', color:'#E2725B'};
+    if(bmi < 40) return {label:'Obesidade grau II', color:'#E2725B'};
+    return {label:'Obesidade grau III', color:'#E2725B'};
+  }
+
+  // ---------- Sound (Web Audio, no external files needed) ----------
+  let audioCtx = null;
+  function getCtx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playTone(freq, startTime, duration, ctx, gainPeak){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+  function playReminderChime(){
+    const ctx = getCtx();
+    const t = ctx.currentTime;
+    playTone(880, t, 0.35, ctx, 0.18);
+    playTone(1174.66, t + 0.16, 0.4, ctx, 0.16);
+  }
+  function playSuccessChime(){
+    const ctx = getCtx();
+    const t = ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f,i)=> playTone(f, t + i*0.09, 0.35, ctx, 0.14));
+  }
+
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function showToast(msg){
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> el.classList.remove('show'), 3200);
+  }
+
+  // ---------- Render ----------
+  function renderDate(){
+    const d = new Date();
+    $('dateReadout').textContent = d.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  }
+
+  function renderTankTicks(goal){
+    const wrap = $('tankTicks');
+    wrap.innerHTML = '';
+    const steps = 4;
+    for(let i=0;i<=steps;i++){
+      const val = Math.round((goal * i/steps)/50)*50;
+      const el = document.createElement('div');
+      el.className = 'tank-tick';
+      el.style.bottom = (i/steps*100) + '%';
+      el.textContent = (val/1000).toFixed(1)+'L';
+      wrap.appendChild(el);
+    }
+  }
+
+  function renderTank(){
+    const goal = calcGoalMl(profile);
+    const consumed = todayLog.totalMl;
+    const pct = Math.max(0, Math.min(100, (consumed/goal)*100));
+    $('tankFill').style.height = pct + '%';
+    $('tankPct').textContent = Math.round(pct) + '%';
+    $('mlConsumed').textContent = consumed;
+    $('mlGoal').textContent = goal + ' ml';
+    const remaining = Math.max(0, goal - consumed);
+    $('mlRemaining').textContent = remaining === 0 ? 'meta atingida 🎉' : remaining + ' ml';
+    renderTankTicks(goal);
+
+    if(consumed >= goal && !goalCelebratedToday){
+      goalCelebratedToday = true;
+      playSuccessChime();
+      showToast('Meta do dia atingida — bom trabalho! 🎉');
+    }
+  }
+
+  function renderBMI(){
+    const bmi = calcBMI(profile);
+    const cls = classifyBMI(bmi);
+    $('bmiValue').textContent = bmi.toFixed(1);
+    $('bmiClass').textContent = cls.label;
+    $('bmiClass').style.background = cls.color;
+    const min = 16, max = 42;
+    const clamped = Math.max(min, Math.min(max, bmi));
+    const pos = ((clamped-min)/(max-min))*100;
+    const marker = $('bmiMarker');
+    marker.style.left = pos + '%';
+    marker.setAttribute('data-val', bmi.toFixed(1));
+  }
+
+  function renderWeekStrip(){
+    const strip = $('weekStrip');
+    strip.innerHTML = '';
+    const goal = calcGoalMl(profile);
+    const dayLabels = ['dom','seg','ter','qua','qui','sex','sáb'];
+    for(let i=6;i>=0;i--){
+      const dKey = dateKeyFor(i);
+      const ml = (i===0) ? todayLog.totalMl : loadLog(dKey).totalMl;
+      const pct = Math.max(2, Math.min(100, (ml/goal)*100));
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const col = document.createElement('div');
+      col.className = 'week-day';
+      col.innerHTML = `
+        <div class="week-bar-track">
+          <div class="week-bar ${ml>=goal ? 'met':''}" style="height:${pct}%"></div>
+        </div>
+        <div class="week-label">${dayLabels[d.getDay()]}</div>
+      `;
+      strip.appendChild(col);
+    }
+  }
+
+  function buildWeightChartSVG(entries){
+    const w = 640, h = 200, padL = 40, padR = 14, padT = 14, padB = 26;
+    const weights = entries.map(e => e.weight);
+    let min = Math.min(...weights), max = Math.max(...weights);
+    if(min === max){ min -= 1; max += 1; }
+    const pad = (max - min) * 0.18;
+    min -= pad; max += pad;
+    const innerW = w - padL - padR, innerH = h - padT - padB;
+    const stepX = entries.length > 1 ? innerW / (entries.length - 1) : 0;
+    const pts = entries.map((e,i) => {
+      const x = padL + stepX * i;
+      const y = padT + innerH - ((e.weight - min) / (max - min)) * innerH;
+      return { x, y, e };
+    });
+
+    let gridSvg = '';
+    const steps = 3;
+    for(let i=0;i<=steps;i++){
+      const val = min + (max - min) * i / steps;
+      const y = padT + innerH - (i/steps) * innerH;
+      gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="rgba(234,246,244,0.08)" stroke-width="1"/>`;
+      gridSvg += `<text x="${padL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" fill="#B9CCD1">${val.toFixed(1)}</text>`;
+    }
+
+    const pathD = pts.map((p,i) => (i===0?'M':'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+    const areaD = pts.length > 1
+      ? pathD + ` L ${pts[pts.length-1].x.toFixed(1)} ${(padT+innerH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT+innerH).toFixed(1)} Z`
+      : '';
+
+    const dotsSvg = pts.map(p => {
+      const d = new Date(p.e.date+'T00:00:00');
+      const label = d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#5FD0C4" stroke="#08192B" stroke-width="1.5"><title>${label} — ${p.e.weight} kg</title></circle>
+        <text x="${p.x.toFixed(1)}" y="${h-8}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#B9CCD1">${label}</text>`;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block;">
+        <defs><linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5FD0C4" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#5FD0C4" stop-opacity="0"/>
+        </linearGradient></defs>
+        ${gridSvg}
+        ${areaD ? `<path d="${areaD}" fill="url(#weightGrad)"/>` : ''}
+        <path d="${pathD}" fill="none" stroke="#2FA8A0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dotsSvg}
+      </svg>`;
+  }
+
+  function renderWeightSection(){
+    const log = loadWeightLog().sort((a,b)=> a.weekStart.localeCompare(b.weekStart));
+    const currentWeekKey = getWeekStartKey(new Date());
+    const currentEntry = log.find(e => e.weekStart === currentWeekKey);
+    const inputRow = $('weightInputRow');
+
+    function renderForm(prefillWeight){
+      inputRow.innerHTML = `
+        <div class="weight-field-inline">
+          <input type="number" id="weightInput" placeholder="${profile ? profile.weight : '70'}" min="20" max="300" step="0.1" inputmode="decimal" value="${prefillWeight != null ? prefillWeight : ''}">
+          <span style="color:var(--foam-dim);font-size:13px;">kg</span>
+          <button class="weight-save-btn" id="weightSaveBtn">registrar peso da semana</button>
+        </div>`;
+      $('weightSaveBtn').addEventListener('click', () => {
+        const val = parseFloat($('weightInput').value);
+        if(!(val > 20 && val < 300)){ showToast('Digite um peso válido em kg.'); return; }
+        registerWeight(val);
+      });
+    }
+
+    if(currentEntry){
+      const d = new Date(currentEntry.date+'T00:00:00');
+      inputRow.innerHTML = `
+        <div class="weight-badge">
+          <div>
+            <div class="weight-badge-value">${currentEntry.weight} kg</div>
+            <div class="weight-badge-sub">registrado em ${d.toLocaleDateString('pt-BR')} · semana atual</div>
+          </div>
+          <button class="weight-edit-link" id="weightEditLink">editar</button>
+        </div>`;
+      $('weightEditLink').addEventListener('click', () => renderForm(currentEntry.weight));
+    } else {
+      renderForm(null);
+    }
+
+    const chartWrap = $('weightChartWrap');
+    const statsWrap = $('weightStats');
+    if(log.length === 0){
+      chartWrap.innerHTML = `<div class="weight-empty">Registre seu peso por algumas semanas para ver aqui a sua curva de evolução.</div>`;
+      statsWrap.innerHTML = '';
+    } else if(log.length === 1){
+      chartWrap.innerHTML = `<div class="weight-empty">Só mais um registro na próxima semana e sua curva de evolução aparece aqui.</div>`;
+      statsWrap.innerHTML = `<span>peso atual: <strong>${log[0].weight} kg</strong></span>`;
+    } else {
+      const shown = log.slice(-16);
+      chartWrap.innerHTML = buildWeightChartSVG(shown);
+      const first = shown[0].weight, last = shown[shown.length-1].weight;
+      const delta = last - first;
+      const arrow = delta > 0.05 ? '▲' : (delta < -0.05 ? '▼' : '—');
+      statsWrap.innerHTML = `
+        <span>peso atual: <strong>${last} kg</strong></span>
+        <span>variação no período: <strong>${arrow} ${Math.abs(delta).toFixed(1)} kg</strong></span>
+        <span>registros: <strong>${log.length}</strong></span>`;
+    }
+  }
+
+  function registerWeight(weightVal){
+    const weekKey = getWeekStartKey(new Date());
+    let log = loadWeightLog();
+    const idx = log.findIndex(e => e.weekStart === weekKey);
+    const entry = { weekStart: weekKey, date: todayKey(), weight: weightVal };
+    if(idx >= 0) log[idx] = entry; else log.push(entry);
+    log.sort((a,b)=> a.weekStart.localeCompare(b.weekStart));
+    saveWeightLog(log);
+
+    if(profile){
+      profile.weight = weightVal;
+      saveProfile(profile);
+      renderBMI();
+      renderTank();
+      renderWeekStrip();
+    }
+    renderWeightSection();
+    showToast('Peso da semana registrado — perfil atualizado ✅');
+  }
+
+  function renderReminderUI(){
+    $('reminderToggle').checked = reminderSettings.enabled;
+    $('intervalSelect').value = String(reminderSettings.intervalMin);
+    $('quietStart').value = reminderSettings.quietStart;
+    $('quietEnd').value = reminderSettings.quietEnd;
+    $('reminderSubStatus').textContent = reminderSettings.enabled
+      ? `a cada ${labelForInterval(reminderSettings.intervalMin)} · silencioso das ${reminderSettings.quietStart} às ${reminderSettings.quietEnd}`
+      : 'desligado';
+
+    const pill = $('notifStatusPill');
+    if(!('Notification' in window)){
+      pill.textContent = 'notificações: indisponíveis neste navegador';
+      pill.className = 'status-pill warn';
+    } else if(Notification.permission === 'granted'){
+      pill.textContent = 'notificações: ativas';
+      pill.className = 'status-pill ok';
+    } else if(Notification.permission === 'denied'){
+      pill.textContent = 'notificações: bloqueadas nas configurações';
+      pill.className = 'status-pill warn';
+    } else {
+      pill.textContent = 'notificações: não ativadas';
+      pill.className = 'status-pill';
+    }
+  }
+
+  function labelForInterval(min){
+    if(min === 30) return '30 min';
+    if(min === 60) return '1 h';
+    if(min === 90) return '1h30';
+    if(min === 120) return '2 h';
+    if(min === 180) return '3 h';
+    return min + ' min';
+  }
+
+  function renderAll(){
+    renderDate();
+    renderTank();
+    renderBMI();
+    renderWeekStrip();
+    renderReminderUI();
+    renderWeightSection();
+  }
+
+  // ---------- Actions ----------
+  function addWater(ml){
+    todayLog.totalMl += ml;
+    todayLog.entries.push({ ml, t: Date.now() });
+    saveLog(todayKey(), todayLog);
+    renderTank();
+    renderWeekStrip();
+  }
+
+  function undoLast(){
+    if(todayLog.entries.length === 0) return;
+    const last = todayLog.entries.pop();
+    todayLog.totalMl = Math.max(0, todayLog.totalMl - last.ml);
+    saveLog(todayKey(), todayLog);
+    renderTank();
+    renderWeekStrip();
+  }
+
+  function resetDay(){
+    todayLog = { totalMl:0, entries:[] };
+    goalCelebratedToday = false;
+    saveLog(todayKey(), todayLog);
+    renderTank();
+    renderWeekStrip();
+  }
+
+  // ---------- Reminders ----------
+  function isWithinQuietHours(now, startStr, endStr){
+    const [sh, sm] = startStr.split(':').map(Number);
+    const [eh, em] = endStr.split(':').map(Number);
+    const start = sh*60+sm, end = eh*60+em;
+    const cur = now.getHours()*60 + now.getMinutes();
+    if(start === end) return false;
+    if(start < end) return cur >= start && cur < end;
+    return cur >= start || cur < end; // wraps past midnight
+  }
+
+  function fireReminder(){
+    const now = new Date();
+    if(isWithinQuietHours(now, reminderSettings.quietStart, reminderSettings.quietEnd)) return;
+
+    const goal = calcGoalMl(profile);
+    if(todayLog.totalMl >= goal) return; // already hit goal, no need to nag
+
+    playReminderChime();
+    const frame = $('tankFrame');
+    if(frame){ frame.classList.remove('reminding'); void frame.offsetWidth; frame.classList.add('reminding'); }
+    showToast('💧 Hora de beber água!');
+
+    if('Notification' in window && Notification.permission === 'granted'){
+      try{
+        new Notification('Hora de beber água 💧', {
+          body: `Você já tomou ${todayLog.totalMl} ml de ${goal} ml hoje.`,
+          icon: './icons/icon-192.png',
+          tag: 'mare-reminder'
+        });
+      }catch(e){ /* some browsers require the service worker path instead */
+        if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
+          navigator.serviceWorker.getRegistration().then(reg=>{
+            if(reg) reg.showNotification('Hora de beber água 💧', {
+              body: `Você já tomou ${todayLog.totalMl} ml de ${goal} ml hoje.`,
+              icon: './icons/icon-192.png',
+              tag: 'mare-reminder'
+            });
+          });
+        }
+      }
+    }
+  }
+
+  function restartReminderTimer(){
+    if(reminderTimer) clearInterval(reminderTimer);
+    if(!reminderSettings.enabled) return;
+    reminderTimer = setInterval(fireReminder, reminderSettings.intervalMin * 60 * 1000);
+  }
+
+  async function requestNotifPermission(){
+    if(!('Notification' in window)){
+      showToast('Este navegador não suporta notificações.');
+      return;
+    }
+    try{
+      const perm = await Notification.requestPermission();
+      renderReminderUI();
+      if(perm === 'granted') showToast('Notificações ativadas ✅');
+      else if(perm === 'denied') showToast('Notificações bloqueadas — ative nas configurações do navegador.');
+    }catch(e){ console.error(e); }
+  }
+
+  // ---------- Modal / onboarding ----------
+  function setupPillGroup(groupId, onSelect){
+    const group = $(groupId);
+    group.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{
+        group.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+        p.classList.add('active');
+        onSelect(p.getAttribute('data-val'));
+      });
+    });
+  }
+
+  function openModal(existing){
+    $('modalOverlay').classList.remove('hidden');
+    editingSex = existing ? existing.sex : null;
+    editingActivity = existing ? existing.activity : null;
+    editingClimate = existing ? existing.climate : null;
+
+    $('modalTitle').textContent = existing ? 'Editar perfil' : 'Bem-vindo(a) à Maré';
+    $('fName').value = existing ? existing.name : '';
+    $('fWeight').value = existing ? existing.weight : '';
+    $('fHeight').value = existing ? existing.height : '';
+    $('fAge').value = existing ? existing.age : '';
+    $('formError').style.display = 'none';
+
+    ['sexPills','activityPills','climatePills'].forEach(id=>{
+      document.getElementById(id).querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    });
+    if(existing){
+      const map = {sexPills: existing.sex, activityPills: existing.activity, climatePills: existing.climate};
+      Object.entries(map).forEach(([groupId,val])=>{
+        const el = document.getElementById(groupId).querySelector(`.pill[data-val="${val}"]`);
+        if(el) el.classList.add('active');
+      });
+    }
+  }
+
+  function closeModal(){ $('modalOverlay').classList.add('hidden'); }
+
+  function handleSubmitProfile(){
+    const name = $('fName').value.trim() || 'Você';
+    const weight = parseFloat($('fWeight').value);
+    const height = parseFloat($('fHeight').value);
+    const age = parseInt($('fAge').value, 10);
+
+    const valid = weight > 0 && height > 0 && age > 0 && editingSex && editingActivity && editingClimate;
+    if(!valid){ $('formError').style.display = 'block'; return; }
+    $('formError').style.display = 'none';
+
+    profile = { name, weight, height, age, sex: editingSex, activity: editingActivity, climate: editingClimate };
+    saveProfile(profile);
+    if(loadWeightLog().length === 0){
+      saveWeightLog([{ weekStart: getWeekStartKey(new Date()), date: todayKey(), weight: profile.weight }]);
+    }
+    closeModal();
+    $('editProfileBtn').classList.remove('hidden');
+    $('mainContent').classList.remove('hidden');
+    renderAll();
+  }
+
+  // ---------- Install prompt (Android/Chrome) ----------
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if(!sessionStorage.getItem('mare_install_dismissed')){
+      $('installBanner').classList.remove('hidden');
+    }
+  });
+  window.addEventListener('appinstalled', ()=>{
+    $('installBanner').classList.add('hidden');
+  });
+
+  // ---------- Wire up ----------
+  document.addEventListener('DOMContentLoaded', () => {
+    setupPillGroup('sexPills', v => editingSex = v);
+    setupPillGroup('activityPills', v => editingActivity = v);
+    setupPillGroup('climatePills', v => editingClimate = v);
+
+    $('submitProfileBtn').addEventListener('click', handleSubmitProfile);
+    $('editProfileBtn').addEventListener('click', () => openModal(profile));
+
+    document.querySelectorAll('.qa-btn[data-ml]').forEach(btn=>{
+      btn.addEventListener('click', () => addWater(parseInt(btn.getAttribute('data-ml'),10)));
+    });
+    $('customAddBtn').addEventListener('click', () => {
+      const val = prompt('Quantos ml você bebeu?');
+      const ml = parseInt(val, 10);
+      if(ml > 0 && ml < 5000) addWater(ml);
+    });
+    $('undoBtn').addEventListener('click', undoLast);
+    $('resetDayBtn').addEventListener('click', () => {
+      if(confirm('Zerar todos os registros de hoje?')) resetDay();
+    });
+
+    // Reminders
+    $('reminderToggle').addEventListener('change', (e)=>{
+      reminderSettings.enabled = e.target.checked;
+      saveReminderSettings(reminderSettings);
+      renderReminderUI();
+      restartReminderTimer();
+      if(reminderSettings.enabled && 'Notification' in window && Notification.permission === 'default'){
+        requestNotifPermission();
+      }
+    });
+    $('intervalSelect').addEventListener('change', (e)=>{
+      reminderSettings.intervalMin = parseInt(e.target.value, 10);
+      saveReminderSettings(reminderSettings);
+      renderReminderUI();
+      restartReminderTimer();
+    });
+    $('quietStart').addEventListener('change', (e)=>{
+      reminderSettings.quietStart = e.target.value;
+      saveReminderSettings(reminderSettings);
+      renderReminderUI();
+    });
+    $('quietEnd').addEventListener('change', (e)=>{
+      reminderSettings.quietEnd = e.target.value;
+      saveReminderSettings(reminderSettings);
+      renderReminderUI();
+    });
+    $('testSoundBtn').addEventListener('click', () => { playReminderChime(); showToast('🔊 assim soa o lembrete'); });
+    $('notifPermBtn').addEventListener('click', requestNotifPermission);
+
+    // Install banner
+    $('installBtn').addEventListener('click', async ()=>{
+      if(!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      $('installBanner').classList.add('hidden');
+    });
+    $('installClose').addEventListener('click', ()=>{
+      $('installBanner').classList.add('hidden');
+      sessionStorage.setItem('mare_install_dismissed','1');
+    });
+
+    renderDate();
+
+    profile = loadProfile();
+    todayLog = loadLog(todayKey());
+    reminderSettings = loadReminderSettings();
+
+    $('loadingState').classList.add('hidden');
+
+    if(profile){
+      $('editProfileBtn').classList.remove('hidden');
+      $('mainContent').classList.remove('hidden');
+      renderAll();
+      restartReminderTimer();
+    } else {
+      openModal(null);
+    }
+
+    // Re-render at local midnight rollover if app stays open
+    setInterval(()=>{
+      const key = todayKey();
+      if(key !== (todayLog._loadedFor || key)){ /* noop placeholder */ }
+    }, 60000);
+
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
